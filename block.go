@@ -14,13 +14,13 @@ var (
 )
 
 type Block struct{
-	version int32
-	prevBlockHash []byte
-	merkleroot [] byte
-	hash []byte
-	time int32
-	bits int32
-	nonce int32
+	Version int32
+	PrevBlockHash []byte
+	Merkleroot [] byte
+	Hash []byte
+	Time int32
+	Bits int32
+	Nonce int32
 	Transations []*Transation
 
 }
@@ -31,12 +31,12 @@ func (block *Block) serialize() []byte{
 
 	result := bytes.Join(
 		[][]byte{
-			IntToHex(block.version),
-			block.prevBlockHash,
-			block.merkleroot,
-			IntToHex(block.time),
-			IntToHex(block.bits),
-			IntToHex(block.nonce)},
+			IntToHex(block.Version),
+			block.PrevBlockHash,
+			block.Merkleroot,
+			IntToHex(block.Time),
+			IntToHex(block.Bits),
+			IntToHex(block.Nonce)},
 		[]byte{},
 	)
 
@@ -83,7 +83,7 @@ func (b*Block) createMerkelTreeRoot(transations []*Transation){
 
 	mTree := NewMerkleTree(tranHash)
 
-	b.merkleroot =  mTree.RootNode.Data
+	b.Merkleroot =  mTree.RootNode.Data
 }
 
 
@@ -180,12 +180,34 @@ func TestCreateMerkleTreeRoot(){
 
 	block.createMerkelTreeRoot(Transations)
 
-	fmt.Printf("%x\n",block.merkleroot)
+	fmt.Printf("%x\n",block.Merkleroot)
+}
+
+func TestPow(){
+	//初始化区块
+	block := &Block{
+		2,
+		[]byte{},
+		[]byte{},
+		[]byte{},
+		1418755780,
+		404454260,
+		0,
+		[]*Transation{},
+	}
+
+	pow:=NewProofofWork(block)
+
+	nonce,_:= pow.Run()
+
+	block.Nonce = nonce
+
+	fmt.Println("POW:",pow.Validate())
+
 }
 
 
 
-
 func main(){
-	TestCreateMerkleTreeRoot()
+	TestPow()
 }
