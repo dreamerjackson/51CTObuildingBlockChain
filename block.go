@@ -166,10 +166,12 @@ func NewGensisBlock() * Block{
 	block.Nonce = nonce
 	block.Hash = hash
 
-	block.String()
+	//block.String()
 	return block
 }
 
+
+
 func main(){
-	NewGensisBlock()
+	TestBoltDB()
 }

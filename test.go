@@ -77,3 +77,10 @@ func TestPow(){
 	fmt.Println("POW:",pow.Validate())
 
 }
+
+func TestBoltDB(){
+	blockchain := NewBlockchain()
+	blockchain.AddBlock()
+	blockchain.AddBlock()
+	blockchain.printBlockchain()
+}

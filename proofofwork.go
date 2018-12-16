@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"bytes"
 	"crypto/sha256"
-	"fmt"
 )
 
 type  ProofOfWork struct{
@@ -52,7 +51,7 @@ func (pow * ProofOfWork) Run() (int32,[]byte){
 			//double hash
 			fitstHash := sha256.Sum256(data)
 			secondhash = sha256.Sum256(fitstHash[:])
-			fmt.Printf("%x\n",secondhash)
+		//	fmt.Printf("%x\n",secondhash)
 
 
 			currenthash.SetBytes(secondhash[:])
