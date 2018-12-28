@@ -173,5 +173,8 @@ func NewGensisBlock() * Block{
 
 
 func main(){
-	TestBoltDB()
+	bc :=  NewBlockchain()
+
+	cli := CLI{bc}
+	cli.Run()
 }
