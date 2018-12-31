@@ -124,8 +124,7 @@ func (b*Block)String(){
 	fmt.Printf("nonce:%s\n",strconv.FormatInt(int64(b.Nonce),10))
 }
 
-func NewBlock(prevBlockHash []byte) * Block{
-
+func  NewBlock(transations []*Transation, prevBlockHash []byte) * Block{
 	block := &Block{
 		2,
 		prevBlockHash,
@@ -134,7 +133,7 @@ func NewBlock(prevBlockHash []byte) * Block{
 		int32(time.Now().Unix()),
 		404454260,
 		0,
-		[]*Transation{},
+		transations,
 	}
 
 	pow := NewProofofWork(block)
@@ -147,7 +146,7 @@ func NewBlock(prevBlockHash []byte) * Block{
 	return block
 }
 
-func NewGensisBlock() * Block{
+func NewGensisBlock(transations []*Transation) * Block{
 	block := &Block{
 		2,
 		[]byte{},
@@ -156,7 +155,7 @@ func NewGensisBlock() * Block{
 		int32(time.Now().Unix()),
 		404454260,
 		0,
-		[]*Transation{},
+		transations,
 	}
 
 	pow:=NewProofofWork(block)

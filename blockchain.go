@@ -4,6 +4,7 @@ import (
 	"github.com/boltdb/bolt"
 	"log"
 	"fmt"
+	"encoding/hex"
 )
 
 const dbFile = "blockchain.db"
@@ -18,7 +19,7 @@ type BlockChainIterateor struct{
 	currenthash []byte
 	db * bolt.DB
 }
-func (bc * Blockchain) AddBlock(){
+func (bc * Blockchain) MineBlock(transations []*Transation ){
 	var lasthash []byte
 
 	err := bc.db.View(func(tx * bolt.Tx) error{
@@ -29,7 +30,7 @@ func (bc * Blockchain) AddBlock(){
 	if err!=nil{
 		log.Panic(err)
 	}
-	newBlock := NewBlock(lasthash)
+	newBlock := NewBlock(transations,lasthash)
 
 
 	bc.db.Update(func(tx *bolt.Tx) error {
@@ -63,8 +64,8 @@ func NewBlockchain() * Blockchain{
 		if b==nil{
 
 			fmt.Println("区块链不存在，创建一个新的区块链")
-
-			genesis := NewGensisBlock()
+			transation := NewCoinbaseTX("jonson")
+			genesis := NewGensisBlock([]*Transation{transation})
 			 b,err:=tx.CreateBucket([]byte(blockBucket))
 			if err!=nil{
 				log.Panic(err)
@@ -134,3 +135,69 @@ func (bc * Blockchain) printBlockchain(){
 	}
 
 }
+
+func (bc * Blockchain) FindUnspentTransations(address string) []Transation{
+	var unspentTXs []Transation //所有未花费的交易
+
+	spendTXOs := make(map[string][]int) //  string 交易的哈希值 --->   []int 已经被花费的输出的序号   存储已经花费的交易
+
+	bci := bc.iterator()
+
+	for{
+		block:=bci.Next()
+
+		for _,tx := range block.Transations{
+			txID := hex.EncodeToString(tx.ID)
+
+		output:
+			for outIdx,out := range tx.Vout{
+				if spendTXOs[txID] !=nil{
+					for _,spentOut:=range spendTXOs[txID]{
+						if spentOut == outIdx{
+							continue output
+						}
+					}
+				}
+
+				if out.CanBeUnlockedWith(address){
+					unspentTXs = append(unspentTXs,*tx)
+				}
+			}
+
+			if tx.IsCoinBase()==false{
+				for _,in :=range tx.Vin{
+					if in.canUnlockOutputWith(address){
+						inTxId := hex.EncodeToString(in.TXid)
+						spendTXOs[inTxId] = append(spendTXOs[inTxId],in.Voutindex)
+					}
+				}
+			}
+
+		}
+
+		if len(block.PrevBlockHash) == 0{
+			break
+		}
+	}
+
+	return unspentTXs
+}
+
+func (bc *Blockchain) FindUTXO(address string) []TXOutput{
+	var UTXOs []TXOutput
+
+	unspendTransations := bc.FindUnspentTransations(address)
+
+	for _,tx :=range unspendTransations{
+		for _,out := range tx.Vout{
+			if out.CanBeUnlockedWith(address){
+				UTXOs = append(UTXOs,out)
+			}
+		}
+	}
+
+	return UTXOs
+
+
+}
+

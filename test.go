@@ -80,7 +80,7 @@ func TestPow(){
 
 func TestBoltDB(){
 	blockchain := NewBlockchain()
-	blockchain.AddBlock()
-	blockchain.AddBlock()
+	blockchain.MineBlock([]*Transation{})
+	blockchain.MineBlock([]*Transation{})
 	blockchain.printBlockchain()
 }

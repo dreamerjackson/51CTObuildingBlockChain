@@ -21,12 +21,12 @@ type Transation struct{
 type TXInput struct {
 	TXid []byte
 	Voutindex int
-	Signature []byte
+	Signature []byte  //'Bob'
 }
 
 type TXOutput struct {
-	value int
-	PubkeyHash []byte
+	Value int
+	PubkeyHash []byte  //'Bob'
 }
 
 func (tx Transation) String() string {
@@ -43,7 +43,7 @@ func (tx Transation) String() string {
 
 	for i, output := range tx.Vout {
 		lines = append(lines, fmt.Sprintf("     Output %d:", i))
-		lines = append(lines, fmt.Sprintf("       Value:  %d", output.value))
+		lines = append(lines, fmt.Sprintf("       Value:  %d", output.Value))
 		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubkeyHash))
 	}
 
@@ -87,10 +87,26 @@ func NewTXOutput(value int,address string) * TXOutput{
 func NewCoinbaseTX(to string) *Transation{
 	txin := TXInput{[]byte{},-1,nil}
 	txout := NewTXOutput(subsidy,to)
-
 	tx:= Transation{nil,[]TXInput{txin},[]TXOutput{*txout}}
 
 	tx.ID = tx.Hash()
 
 	return &tx
 }
+
+func (out *TXOutput) CanBeUnlockedWith(unlockdata string) bool{
+
+	return string(out.PubkeyHash) ==unlockdata
+}
+
+func (in * TXInput) canUnlockOutputWith(unlockdata string) bool{
+	return string(in.Signature) == unlockdata
+
+}
+
+func (tx Transation) IsCoinBase() bool{
+	return len(tx.Vin) == 1 && len(tx.Vin[0].TXid) ==0 &&  tx.Vin[0].Voutindex == -1
+}
+
+
+

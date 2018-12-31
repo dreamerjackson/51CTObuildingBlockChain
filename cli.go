@@ -14,8 +14,7 @@ type CLI struct{
 
 
 func (cli * CLI) addBlock(){
-
-	cli.bc.AddBlock()
+	cli.bc.MineBlock([]*Transation{})
 }
 func (cli * CLI) validateArgs(){
 	if len(os.Args) < 1{
@@ -31,6 +30,19 @@ func (cli * CLI ) printChain(){
 }
 
 
+func (cli * CLI) getBalance(address string){
+	balance := 0
+	UTXOs := cli.bc.FindUTXO(address)
+
+	for _,out := range UTXOs{
+		balance += out.Value
+	}
+
+	fmt.Printf("\nbalance of '%s':%d\n",address,balance)
+}
+
+
+
 func (cli * CLI) printUsage(){
 
 	fmt.Println("USages:")
@@ -42,8 +54,17 @@ func (cli * CLI) Run(){
 
 	addBlockCmd  := flag.NewFlagSet("addblock",flag.ExitOnError)
 	printChianCmd  := flag.NewFlagSet("printChian",flag.ExitOnError)
-	switch os.Args[1]{
+	getBalanceCmd := flag.NewFlagSet("getbalance",flag.ExitOnError)
 
+	getBalanceAddress := getBalanceCmd.String("address","","the address to get balance of ")
+
+
+	switch os.Args[1]{
+	case "getbalance":
+		err:=getBalanceCmd.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
 	case "addblock":
 		err:=addBlockCmd.Parse(os.Args[2:])
 
@@ -71,5 +92,12 @@ func (cli * CLI) Run(){
 		cli.printChain()
 	}
 
+	if getBalanceCmd.Parsed(){
+			if *getBalanceAddress == ""{
+				os.Exit(1)
+
+			}
+			cli.getBalance(*getBalanceAddress)
+	}
 
 }
