@@ -29,7 +29,13 @@ func (cli * CLI ) printChain(){
 	cli.bc.printBlockchain()
 }
 
+func (cli*CLI) send(from,to string,amount int){
+	tx:= NewUTXOTransation(from,to,amount,cli.bc)
 
+	cli.bc.MineBlock([]*Transation{tx})
+
+	fmt.Printf("Success!")
+}
 func (cli * CLI) getBalance(address string){
 	balance := 0
 	UTXOs := cli.bc.FindUTXO(address)
@@ -58,8 +64,18 @@ func (cli * CLI) Run(){
 
 	getBalanceAddress := getBalanceCmd.String("address","","the address to get balance of ")
 
+	sendCmd := flag.NewFlagSet("send",flag.ExitOnError)
+
+	sendFrom := sendCmd.String("from","","source wallet address")
+	sendTo := sendCmd.String("to","","Destination wallet address")
+	sendAmount := sendCmd.Int("amount",0,"Amount to send")
 
 	switch os.Args[1]{
+	case "send":
+		err:=sendCmd.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
 	case "getbalance":
 		err:=getBalanceCmd.Parse(os.Args[2:])
 		if err!=nil{
@@ -99,5 +115,16 @@ func (cli * CLI) Run(){
 			}
 			cli.getBalance(*getBalanceAddress)
 	}
+
+	if sendCmd.Parsed(){
+		if *sendFrom == "" || *sendTo=="" || *sendAmount <=0{
+			os.Exit(1)
+
+		}
+		fmt.Println(*sendFrom,*sendTo,*sendAmount)
+		cli.send(*sendFrom,*sendTo,*sendAmount)
+	}
+
+
 
 }

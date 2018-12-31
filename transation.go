@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"log"
 	"crypto/sha256"
+	"encoding/hex"
 )
 
 const subsidy = 100
@@ -109,4 +110,39 @@ func (tx Transation) IsCoinBase() bool{
 }
 
 
+func NewUTXOTransation(from,to string,amount int, bc * Blockchain) *Transation{
+		var inputs []TXInput
+		var outputs []TXOutput
 
+		acc,validoutputs := bc.FindSpendableOutputs(from,amount)
+
+		if acc < amount{
+			log.Panic("Error:Not enough funds")
+		}
+
+		for txid,outs := range validoutputs{
+			txID ,err := hex.DecodeString(txid)
+			if err !=nil{
+				log.Panic(err)
+			}
+
+			for  _,out := range outs{
+
+				input := TXInput{txID,out,[]byte(from)}
+				inputs  = append(inputs,input)
+			}
+
+		}
+		outputs  = append(outputs,TXOutput{amount,[]byte(to)})
+
+
+		if acc > amount{
+			outputs = append(outputs,TXOutput{acc-amount,[]byte(from)})
+		}
+
+
+		tx:= Transation{nil,inputs,outputs}
+		tx.ID = tx.Hash()
+
+		return &tx
+}
