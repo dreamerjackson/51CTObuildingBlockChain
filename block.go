@@ -170,10 +170,3 @@ func NewGensisBlock(transations []*Transation) * Block{
 }
 
 
-
-func main(){
-	bc :=  NewBlockchain()
-
-	cli := CLI{bc}
-	cli.Run()
-}
