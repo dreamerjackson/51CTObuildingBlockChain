@@ -49,6 +49,32 @@ func (cli * CLI) getBalance(address string){
 
 
 
+func (cli *CLI) createWallet(){
+		wallets,_:=NewWallets()
+		address :=wallets.CreateWallet()
+		wallets.SaveToFile()
+		fmt.Printf("your address:%s\n",address)
+
+}
+
+
+func (cli * CLI) listAddress(){
+
+
+	wallets,err:=NewWallets()
+	if err!=nil{
+		log.Panic(err)
+	}
+
+	addresses :=  wallets.getAddress()
+
+	for _,address := range addresses{
+
+		fmt.Println(address)
+	}
+
+}
+
 func (cli * CLI) printUsage(){
 
 	fmt.Println("USages:")
@@ -70,7 +96,22 @@ func (cli * CLI) Run(){
 	sendTo := sendCmd.String("to","","Destination wallet address")
 	sendAmount := sendCmd.Int("amount",0,"Amount to send")
 
+
+	createWalletCMD := flag.NewFlagSet("createwallet",flag.ExitOnError)
+	listAddressCmd := flag.NewFlagSet("listaddress",flag.ExitOnError)
+
 	switch os.Args[1]{
+	case "createwallet":
+		err:=createWalletCMD.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
+	case "listaddress":
+		err:=listAddressCmd.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
+
 	case "send":
 		err:=sendCmd.Parse(os.Args[2:])
 		if err!=nil{
@@ -125,6 +166,11 @@ func (cli * CLI) Run(){
 		cli.send(*sendFrom,*sendTo,*sendAmount)
 	}
 
-
+	if createWalletCMD.Parsed(){
+		cli.createWallet()
+	}
+	if listAddressCmd.Parsed(){
+		cli.listAddress()
+	}
 
 }
