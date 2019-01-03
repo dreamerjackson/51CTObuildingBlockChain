@@ -37,8 +37,15 @@ func (cli*CLI) send(from,to string,amount int){
 	fmt.Printf("Success!")
 }
 func (cli * CLI) getBalance(address string){
+
+
 	balance := 0
-	UTXOs := cli.bc.FindUTXO(address)
+
+	decodeAddress := Base58Decode([]byte(address))
+	pubkeyHash:= decodeAddress[1:len(decodeAddress)-4]
+
+
+	UTXOs := cli.bc.FindUTXO(pubkeyHash)
 
 	for _,out := range UTXOs{
 		balance += out.Value

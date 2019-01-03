@@ -22,13 +22,23 @@ type Transation struct{
 type TXInput struct {
 	TXid []byte
 	Voutindex int
-	Signature []byte  //'Bob'
+	Signature []byte
+	Pubkey  []byte   //公钥
 }
 
 type TXOutput struct {
 	Value int
-	PubkeyHash []byte  //'Bob'
+	PubkeyHash []byte  //公钥的hash
 }
+
+func (out *TXOutput) Lock(address []byte){
+	decodeAddress := Base58Decode(address)
+	pubkeyhash := decodeAddress[1:len(decodeAddress)-4]
+	out.PubkeyHash =  pubkeyhash
+}
+
+
+
 
 func (tx Transation) String() string {
 	var lines []string
@@ -78,15 +88,16 @@ func (tx *Transation) Hash() []byte{
 //根据金额与地址新建一个输出
 func NewTXOutput(value int,address string) * TXOutput{
 	txo := &TXOutput{value,nil}
-	txo.PubkeyHash = []byte(address)
+	//txo.PubkeyHash = []byte(address)
+	txo.Lock([]byte(address))
 	return txo
 }
 
 
 
 //第一笔coinbase交易
-func NewCoinbaseTX(to string) *Transation{
-	txin := TXInput{[]byte{},-1,nil}
+func NewCoinbaseTX(to,data string) *Transation{
+	txin := TXInput{[]byte{},-1,nil,[]byte(data)}
 	txout := NewTXOutput(subsidy,to)
 	tx:= Transation{nil,[]TXInput{txin},[]TXOutput{*txout}}
 
@@ -95,13 +106,15 @@ func NewCoinbaseTX(to string) *Transation{
 	return &tx
 }
 
-func (out *TXOutput) CanBeUnlockedWith(unlockdata string) bool{
+func (out *TXOutput) CanBeUnlockedWith(pubkeyhash []byte) bool{
 
-	return string(out.PubkeyHash) ==unlockdata
+	return bytes.Compare(out.PubkeyHash,pubkeyhash)==0
 }
 
-func (in * TXInput) canUnlockOutputWith(unlockdata string) bool{
-	return string(in.Signature) == unlockdata
+func (in * TXInput) canUnlockOutputWith(unlockdata []byte) bool{
+		lockinghash := HashPubkey(in.Pubkey)
+
+		return bytes.Compare(lockinghash,unlockdata)==0
 
 }
 
@@ -114,7 +127,14 @@ func NewUTXOTransation(from,to string,amount int, bc * Blockchain) *Transation{
 		var inputs []TXInput
 		var outputs []TXOutput
 
-		acc,validoutputs := bc.FindSpendableOutputs(from,amount)
+
+		wallets,err:= NewWallets()
+		if err !=nil{
+			log.Panic(err)
+
+		}
+		wallet := wallets.GetWallet(from)
+		acc,validoutputs := bc.FindSpendableOutputs(HashPubkey(wallet.Publickey),amount)
 
 		if acc < amount{
 			log.Panic("Error:Not enough funds")
@@ -128,21 +148,22 @@ func NewUTXOTransation(from,to string,amount int, bc * Blockchain) *Transation{
 
 			for  _,out := range outs{
 
-				input := TXInput{txID,out,[]byte(from)}
+				input := TXInput{txID,out,nil,wallet.Publickey}
 				inputs  = append(inputs,input)
 			}
 
 		}
-		outputs  = append(outputs,TXOutput{amount,[]byte(to)})
+		outputs  = append(outputs,*NewTXOutput(amount,to))
 
 
 		if acc > amount{
-			outputs = append(outputs,TXOutput{acc-amount,[]byte(from)})
+			outputs = append(outputs,*NewTXOutput(acc-amount,from))
 		}
 
 
 		tx:= Transation{nil,inputs,outputs}
 		tx.ID = tx.Hash()
 
+		bc.SignTransation(&tx,wallet.PrivateKey)
 		return &tx
 }

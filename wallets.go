@@ -102,8 +102,4 @@ func (ws *Wallets) SaveToFile(){
 		log.Panic(err)
 	}
 
-
-
-
-
 }

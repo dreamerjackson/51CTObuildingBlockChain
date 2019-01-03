@@ -9,6 +9,9 @@ import (
 
 const dbFile = "blockchain.db"
 const blockBucket = "blocks"
+
+
+const genesisData =  "jonson blockchain"
 type Blockchain struct{
 	tip []byte //最近的一个区块的hash值
 	db * bolt.DB
@@ -64,7 +67,7 @@ func NewBlockchain() * Blockchain{
 		if b==nil{
 
 			fmt.Println("区块链不存在，创建一个新的区块链")
-			transation := NewCoinbaseTX("jonson")
+			transation := NewCoinbaseTX("jonson",genesisData)
 			genesis := NewGensisBlock([]*Transation{transation})
 			 b,err:=tx.CreateBucket([]byte(blockBucket))
 			if err!=nil{
@@ -136,7 +139,7 @@ func (bc * Blockchain) printBlockchain(){
 
 }
 
-func (bc * Blockchain) FindUnspentTransations(address string) []Transation{
+func (bc * Blockchain) FindUnspentTransations(pubkeyhash []byte) []Transation{
 	var unspentTXs []Transation //所有未花费的交易
 
 	spendTXOs := make(map[string][]int) //  string 交易的哈希值 --->   []int 已经被花费的输出的序号   存储已经花费的交易
@@ -159,14 +162,14 @@ func (bc * Blockchain) FindUnspentTransations(address string) []Transation{
 					}
 				}
 
-				if out.CanBeUnlockedWith(address){
+				if out.CanBeUnlockedWith(pubkeyhash){
 					unspentTXs = append(unspentTXs,*tx)
 				}
 			}
 
 			if tx.IsCoinBase()==false{
 				for _,in :=range tx.Vin{
-					if in.canUnlockOutputWith(address){
+					if in.canUnlockOutputWith(pubkeyhash){
 						inTxId := hex.EncodeToString(in.TXid)
 						spendTXOs[inTxId] = append(spendTXOs[inTxId],in.Voutindex)
 					}
@@ -183,14 +186,14 @@ func (bc * Blockchain) FindUnspentTransations(address string) []Transation{
 	return unspentTXs
 }
 
-func (bc *Blockchain) FindUTXO(address string) []TXOutput{
+func (bc *Blockchain) FindUTXO(pubkeyhash []byte) []TXOutput{
 	var UTXOs []TXOutput
 
-	unspendTransations := bc.FindUnspentTransations(address)
+	unspendTransations := bc.FindUnspentTransations(pubkeyhash)
 
 	for _,tx :=range unspendTransations{
 		for _,out := range tx.Vout{
-			if out.CanBeUnlockedWith(address){
+			if out.CanBeUnlockedWith(pubkeyhash){
 				UTXOs = append(UTXOs,out)
 			}
 		}
@@ -201,12 +204,12 @@ func (bc *Blockchain) FindUTXO(address string) []TXOutput{
 
 }
 
-func (bc *Blockchain) FindSpendableOutputs(address string,amount int) (int,map[string][]int) {
+func (bc *Blockchain) FindSpendableOutputs(pubkeyhash []byte,amount int) (int,map[string][]int) {
 
 	unspentOutputs := make(map[string][]int)
 
 
-	unspentTXs := bc.FindUnspentTransations(address)
+	unspentTXs := bc.FindUnspentTransations(pubkeyhash)
 
 	accumulated :=0
 
@@ -217,7 +220,7 @@ func (bc *Blockchain) FindSpendableOutputs(address string,amount int) (int,map[s
 		txID := hex.EncodeToString(tx.ID)
 
 		for outIdx,out := range tx.Vout{
-			if out.CanBeUnlockedWith(address) && accumulated < amount{
+			if out.CanBeUnlockedWith(pubkeyhash) && accumulated < amount{
 
 				accumulated += out.Value
 				unspentOutputs[txID] = append(unspentOutputs[txID],outIdx)

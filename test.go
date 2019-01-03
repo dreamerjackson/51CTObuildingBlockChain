@@ -17,11 +17,11 @@ func TestCreateMerkleTreeRoot(){
 
 
 
-	txin := TXInput{[]byte{},-1,nil}
+	txin := TXInput{[]byte{},-1,nil,nil}
 	txout := NewTXOutput(subsidy,"first")
 	tx := Transation{nil,[]TXInput{txin},[]TXOutput{*txout}}
 
-	txin2 := TXInput{[]byte{},-1,nil}
+	txin2 := TXInput{[]byte{},-1,nil,nil}
 	txout2 := NewTXOutput(subsidy,"second")
 	tx2 := Transation{nil,[]TXInput{txin2},[]TXOutput{*txout2}}
 
