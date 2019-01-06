@@ -30,6 +30,7 @@ func (cli * CLI ) printChain(){
 }
 
 func (cli*CLI) send(from,to string,amount int){
+
 	tx:= NewUTXOTransation(from,to,amount,cli.bc)
 
 	cli.bc.MineBlock([]*Transation{tx})

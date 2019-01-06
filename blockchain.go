@@ -5,6 +5,9 @@ import (
 	"log"
 	"fmt"
 	"encoding/hex"
+	"crypto/ecdsa"
+	"bytes"
+	"errors"
 )
 
 const dbFile = "blockchain.db"
@@ -53,7 +56,7 @@ func (bc * Blockchain) MineBlock(transations []*Transation ){
 }
 
 
-func NewBlockchain() * Blockchain{
+func NewBlockchain(address string) * Blockchain{
 	var tip []byte
 	db,err := bolt.Open(dbFile,0600,nil)
 	if err!=nil{
@@ -67,7 +70,7 @@ func NewBlockchain() * Blockchain{
 		if b==nil{
 
 			fmt.Println("区块链不存在，创建一个新的区块链")
-			transation := NewCoinbaseTX("jonson",genesisData)
+			transation := NewCoinbaseTX(address,genesisData)
 			genesis := NewGensisBlock([]*Transation{transation})
 			 b,err:=tx.CreateBucket([]byte(blockBucket))
 			if err!=nil{
@@ -233,4 +236,45 @@ func (bc *Blockchain) FindSpendableOutputs(pubkeyhash []byte,amount int) (int,ma
 	}
 
 	return accumulated,unspentOutputs
+}
+
+
+func (bc*Blockchain) SignTransation(tx *Transation,prikey ecdsa.PrivateKey){
+
+	prevTXs :=  make(map[string]Transation)
+
+	for _,vin := range tx.Vin{
+		prevTX ,err :=  bc.FindTransationById(vin.TXid)
+
+		if err !=nil{
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTX.ID)] = prevTX
+	}
+	tx.Sign(prikey,prevTXs)
+}
+
+func (bc * Blockchain) FindTransationById(ID []byte)(Transation,error){
+
+	bci := bc.iterator()
+
+
+	for{
+		block := bci.Next()
+			for _,tx := range block.Transations{
+
+				if bytes.Compare(tx.ID,ID)==0{
+					return *tx,nil
+				}
+			}
+
+
+
+
+		if len(block.PrevBlockHash) ==0{
+			break
+		}
+	}
+
+	return Transation{},errors.New("transation is not find ")
 }

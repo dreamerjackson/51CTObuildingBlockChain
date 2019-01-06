@@ -8,6 +8,8 @@ import (
 	"log"
 	"crypto/sha256"
 	"encoding/hex"
+	"crypto/ecdsa"
+	"crypto/rand"
 )
 
 const subsidy = 100
@@ -120,6 +122,62 @@ func (in * TXInput) canUnlockOutputWith(unlockdata []byte) bool{
 
 func (tx Transation) IsCoinBase() bool{
 	return len(tx.Vin) == 1 && len(tx.Vin[0].TXid) ==0 &&  tx.Vin[0].Voutindex == -1
+}
+func (tx *Transation) Sign(privkey ecdsa.PrivateKey, prevTXs map[string]Transation) {
+	if tx.IsCoinBase(){
+		return
+	}
+	//检查过程
+	for _,vin :=range tx.Vin{
+		if prevTXs[hex.EncodeToString(vin.TXid)].ID == nil{
+			log.Panic("ERROR:")
+		}
+	}
+
+	txcopy:=tx.TrimmedCopy()
+
+	for inID,vin := range txcopy.Vin{
+		prevTx := prevTXs[hex.EncodeToString(vin.TXid)] //前一笔交易的结果体
+
+		txcopy.Vin[inID].Signature  = nil
+		txcopy.Vin[inID].Pubkey  =  prevTx.Vout[vin.Voutindex].PubkeyHash // 这笔交易的这笔输入的引用的前一笔交易的输出的公钥哈希
+		txcopy.ID = txcopy.Hash()
+		r,s,err := ecdsa.Sign(rand.Reader,&privkey,txcopy.ID)
+
+		if err !=nil{
+			log.Panic(err)
+		}
+
+		signature := append(r.Bytes(),s.Bytes()...)
+
+		tx.Vin[inID].Signature = signature
+		txcopy.Vin[inID].Pubkey  = nil
+	}
+
+
+
+
+
+
+}
+func (tx *Transation) TrimmedCopy() Transation {
+
+	var inputs []TXInput
+	var outputs []TXOutput
+
+
+	for _,vin := range tx.Vin {
+		inputs = append(inputs,TXInput{vin.TXid,vin.Voutindex,nil,nil})
+	}
+
+	for _,vout := range tx.Vout{
+
+		outputs = append(outputs,TXOutput{vout.Value,vout.PubkeyHash})
+	}
+
+	txCopy := Transation{tx.ID,inputs,outputs}
+
+	return txCopy
 }
 
 
