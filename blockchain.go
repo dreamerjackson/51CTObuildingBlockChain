@@ -26,6 +26,15 @@ type BlockChainIterateor struct{
 	db * bolt.DB
 }
 func (bc * Blockchain) MineBlock(transations []*Transation ){
+
+	for _,tx := range transations{
+		if bc.VerifyTransation(tx)!=true{
+			log.Panic("ERROR:INVALID transation")
+		}else{
+			fmt.Println("Verify Success")
+		}
+	}
+
 	var lasthash []byte
 
 	err := bc.db.View(func(tx * bolt.Tx) error{
@@ -64,13 +73,12 @@ func NewBlockchain(address string) * Blockchain{
 	}
 
 	err = db.Update(func(tx * bolt.Tx) error{
-
 		b:= tx.Bucket([]byte(blockBucket))
-
 		if b==nil{
 
 			fmt.Println("区块链不存在，创建一个新的区块链")
 			transation := NewCoinbaseTX(address,genesisData)
+
 			genesis := NewGensisBlock([]*Transation{transation})
 			 b,err:=tx.CreateBucket([]byte(blockBucket))
 			if err!=nil{
@@ -277,4 +285,22 @@ func (bc * Blockchain) FindTransationById(ID []byte)(Transation,error){
 	}
 
 	return Transation{},errors.New("transation is not find ")
+}
+
+func (bc *Blockchain) VerifyTransation(tx * Transation) bool{
+	prevTXs := make(map[string]Transation)
+
+	for _,vin := range tx.Vin{
+		prevTx,err:= bc.FindTransationById(vin.TXid)
+
+		if err !=nil{
+			log.Panic(err)
+		}
+		prevTXs[hex.EncodeToString(prevTx.ID)] = prevTx
+	}
+
+
+	return tx.Verify(prevTXs)
+
+
 }

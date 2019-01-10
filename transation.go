@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/elliptic"
+	"math/big"
 )
 
 const subsidy = 100
@@ -123,6 +125,8 @@ func (in * TXInput) canUnlockOutputWith(unlockdata []byte) bool{
 func (tx Transation) IsCoinBase() bool{
 	return len(tx.Vin) == 1 && len(tx.Vin[0].TXid) ==0 &&  tx.Vin[0].Voutindex == -1
 }
+
+
 func (tx *Transation) Sign(privkey ecdsa.PrivateKey, prevTXs map[string]Transation) {
 	if tx.IsCoinBase(){
 		return
@@ -142,7 +146,17 @@ func (tx *Transation) Sign(privkey ecdsa.PrivateKey, prevTXs map[string]Transati
 		txcopy.Vin[inID].Signature  = nil
 		txcopy.Vin[inID].Pubkey  =  prevTx.Vout[vin.Voutindex].PubkeyHash // 这笔交易的这笔输入的引用的前一笔交易的输出的公钥哈希
 		txcopy.ID = txcopy.Hash()
+
+		//fmt.Printf("之前的hash结果：%x\n",txcopy.ID)
+
+
+
 		r,s,err := ecdsa.Sign(rand.Reader,&privkey,txcopy.ID)
+
+
+
+
+
 
 		if err !=nil{
 			log.Panic(err)
@@ -151,6 +165,10 @@ func (tx *Transation) Sign(privkey ecdsa.PrivateKey, prevTXs map[string]Transati
 		signature := append(r.Bytes(),s.Bytes()...)
 
 		tx.Vin[inID].Signature = signature
+
+
+
+
 		txcopy.Vin[inID].Pubkey  = nil
 	}
 
@@ -180,6 +198,59 @@ func (tx *Transation) TrimmedCopy() Transation {
 	return txCopy
 }
 
+func (tx *Transation) Verify(prevTxs map[string]Transation) bool {
+	if tx.IsCoinBase(){
+		return true
+	}
+
+
+	for _,vin := range tx.Vin{
+
+		if prevTxs[hex.EncodeToString(vin.TXid)].ID==nil{
+			log.Panic("ERRor")
+		}
+	}
+
+	txcopy := tx.TrimmedCopy()
+
+	//椭圆曲线
+	curve := elliptic.P256()
+
+
+	  for inID,vin := range tx.Vin{
+	  	prevTx:= prevTxs[hex.EncodeToString(vin.TXid)]
+	  	txcopy.Vin[inID].Signature = nil
+	  	txcopy.Vin[inID].Pubkey = prevTx.Vout[vin.Voutindex].PubkeyHash
+	  	txcopy.ID = txcopy.Hash()
+
+	  	r:=big.Int{}
+	  	s:=big.Int{}
+
+	  	siglen:=len(vin.Signature)
+	  	r.SetBytes(vin.Signature[:(siglen/2)])
+	  	s.SetBytes(vin.Signature[(siglen/2):])
+
+	  	x:=big.Int{}
+	  	y := big.Int{}
+
+	  	keylen :=len(vin.Pubkey)
+
+		  x.SetBytes(vin.Pubkey[:(keylen/2)])
+		  y.SetBytes(vin.Pubkey[(keylen/2):])
+
+	  	rawPubkey := ecdsa.PublicKey{curve,&x,&y}
+
+		//  fmt.Printf("之后的hash结果：%x\n",txcopy.ID)
+	  	if ecdsa.Verify(&rawPubkey,txcopy.ID,&r,&s) == false{
+	  		return false
+		}
+
+		  txcopy.Vin[inID].Pubkey =nil
+	  }
+
+	  return true
+
+}
 
 func NewUTXOTransation(from,to string,amount int, bc * Blockchain) *Transation{
 		var inputs []TXInput
