@@ -104,6 +104,10 @@ func NewBlockchain(address string) * Blockchain{
 	}
 
 	bc:=Blockchain{tip,db}
+
+	 set:=UTXOSet{&bc}
+	 set.Reindex()
+
 	return &bc
 }
 
@@ -298,9 +302,58 @@ func (bc *Blockchain) VerifyTransation(tx * Transation) bool{
 		}
 		prevTXs[hex.EncodeToString(prevTx.ID)] = prevTx
 	}
-
-
 	return tx.Verify(prevTXs)
+}
 
+func (bc * Blockchain) FindALLUTXO() map[string]TXOutputs{
+	UTXO := make(map[string]TXOutputs)
+
+	spentTXs := make(map[string][]int)
+
+	bci := bc.iterator()
+
+	for{
+
+		block:= bci.Next()
+
+		for _,tx :=range block.Transations{
+			txID := hex.EncodeToString(tx.ID)
+		Outputs:
+			for outIdx,out := range tx.Vout{
+
+				if spentTXs[txID] !=nil{
+					for _,spendOutIds := range spentTXs[txID]{
+						if spendOutIds == outIdx{
+							continue Outputs
+						}
+					}
+				}
+				outs:=UTXO[txID]
+				outs.Outputs = append(outs.Outputs,out)
+				UTXO[txID] = outs
+			}
+
+
+			if tx.IsCoinBase()==false{
+				for _,in := range tx.Vin{
+					inTXID := hex.EncodeToString(in.TXid)
+
+					spentTXs[inTXID] = append(spentTXs[inTXID],in.Voutindex)
+				}
+			}
+
+		}
+
+
+		if len(block.PrevBlockHash)==0{
+			break
+		}
+	}
+
+	return UTXO
 
 }
+
+
+
+

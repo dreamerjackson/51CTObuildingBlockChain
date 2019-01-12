@@ -35,6 +35,48 @@ type TXOutput struct {
 	PubkeyHash []byte  //公钥的hash
 }
 
+
+
+type TXOutputs struct{
+
+	Outputs []TXOutput
+}
+
+func (outs TXOutputs) Serialize() []byte{
+
+	var buff bytes.Buffer
+
+	enc := gob.NewEncoder(&buff)
+
+	err := enc.Encode(outs)
+
+
+	if err !=nil{
+		log.Panic(err)
+	}
+
+	return buff.Bytes()
+}
+
+func DeserializeOutputs(data []byte) TXOutputs{
+
+	var outputs TXOutputs
+
+	dec := gob.NewDecoder(bytes.NewReader(data))
+
+	err := dec.Decode(&outputs)
+
+
+	if err !=nil{
+		log.Panic(err)
+	}
+
+	return outputs
+}
+
+
+
+
 func (out *TXOutput) Lock(address []byte){
 	decodeAddress := Base58Decode(address)
 	pubkeyhash := decodeAddress[1:len(decodeAddress)-4]
