@@ -33,8 +33,15 @@ func (cli*CLI) send(from,to string,amount int){
 
 	tx:= NewUTXOTransation(from,to,amount,cli.bc)
 
-	cli.bc.MineBlock([]*Transation{tx})
+	newblock := cli.bc.MineBlock([]*Transation{tx})
 
+	set:= UTXOSet{cli.bc}
+
+	set.update(newblock)
+
+	//cli.getBalance("1NeBzmfLDxinqHwNdzoA5y8c5fYgZgiUds")
+	//cli.getBalance("177qNwmRrGcGc64MqoACHC4Z4fYpxK2qYZ")
+	//cli.getBalance("12uhpUNXdju7SNpB2ynYXFNAGKAM8otsTJ")
 	fmt.Printf("Success!")
 }
 func (cli * CLI) getBalance(address string){

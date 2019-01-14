@@ -101,3 +101,60 @@ func (u UTXOSet) FindUTXObyPubkeyHash(pubkeyhash []byte) []TXOutput{
 	}
 		return UTXOs
 }
+
+func (u UTXOSet) update(block * Block){
+	db := u.bchain.db
+
+	err:= db.Update(func(tx * bolt.Tx) error {
+		b:= tx.Bucket([]byte(utxoBucket))
+
+		for _,tx:=range block.Transations{
+			if tx.IsCoinBase()==false{
+				for _,vin := range tx.Vin{
+					updateouts := TXOutputs{}
+					outsbytes := b.Get(vin.TXid)
+					outs:= DeserializeOutputs(outsbytes)
+
+					for outIdx,out := range outs.Outputs{
+						if outIdx != vin. Voutindex{
+
+							updateouts.Outputs  = append(updateouts.Outputs ,out)
+						}
+					}
+
+					if len(updateouts.Outputs)==0{
+						err := b.Delete(vin.TXid)
+						if err !=nil{
+							log.Panic(err)
+						}
+					}else{
+						err := b.Put(vin.TXid,updateouts.Serialize())
+						if err !=nil{
+							log.Panic(err)
+						}
+
+					}
+				}
+			}
+
+			newOutputs :=TXOutputs{}
+
+			for _,out := range tx.Vout{
+				newOutputs.Outputs = append(newOutputs.Outputs,out)
+			}
+
+			err := b.Put(tx.ID,newOutputs.Serialize())
+			if err !=nil{
+				log.Panic(err)
+			}
+
+
+		}
+		return nil
+
+	})
+	if err !=nil{
+		log.Panic(err)
+	}
+
+}

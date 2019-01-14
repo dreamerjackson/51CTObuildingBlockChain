@@ -25,7 +25,7 @@ type BlockChainIterateor struct{
 	currenthash []byte
 	db * bolt.DB
 }
-func (bc * Blockchain) MineBlock(transations []*Transation ){
+func (bc * Blockchain) MineBlock(transations []*Transation ) *Block{
 
 	for _,tx := range transations{
 		if bc.VerifyTransation(tx)!=true{
@@ -62,6 +62,7 @@ func (bc * Blockchain) MineBlock(transations []*Transation ){
 			bc.tip = newBlock.Hash
 			return nil
 	})
+		return newBlock
 }
 
 
