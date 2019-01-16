@@ -8,7 +8,6 @@ import (
 )
 
 type CLI struct{
-
 	bc * Blockchain
 }
 
@@ -91,22 +90,39 @@ func (cli * CLI) listAddress(){
 
 }
 
+
+
+
 func (cli * CLI) printUsage(){
 
 	fmt.Println("USages:")
 	fmt.Println("addblock-增加区块:")
 	fmt.Println("printChain:打印区块链")
 }
+
+
 func (cli * CLI) Run(){
 	cli.validateArgs()
+
+		nodeID := os.Getenv("NODE_ID")
+
+		if nodeID ==""{
+			fmt.Printf("NODE_ID is not set")
+			os.Exit(1)
+		}
+
 
 	addBlockCmd  := flag.NewFlagSet("addblock",flag.ExitOnError)
 	printChianCmd  := flag.NewFlagSet("printChian",flag.ExitOnError)
 	getBalanceCmd := flag.NewFlagSet("getbalance",flag.ExitOnError)
-
 	getBalanceAddress := getBalanceCmd.String("address","","the address to get balance of ")
 
+	startNodeCmd := flag.NewFlagSet("startnode",flag.ExitOnError)
+	startNodeminner := startNodeCmd.String("minner","","minner address")
+
+
 	sendCmd := flag.NewFlagSet("send",flag.ExitOnError)
+
 
 	sendFrom := sendCmd.String("from","","source wallet address")
 	sendTo := sendCmd.String("to","","Destination wallet address")
@@ -116,7 +132,22 @@ func (cli * CLI) Run(){
 	createWalletCMD := flag.NewFlagSet("createwallet",flag.ExitOnError)
 	listAddressCmd := flag.NewFlagSet("listaddress",flag.ExitOnError)
 
+
+
+	getBestHeight := flag.NewFlagSet("getBestHeight",flag.ExitOnError)
 	switch os.Args[1]{
+	case "startnode":
+		err:=startNodeCmd.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
+
+	case "getBestHeight":
+		err:=getBestHeight.Parse(os.Args[2:])
+		if err!=nil{
+			log.Panic(err)
+		}
+
 	case "createwallet":
 		err:=createWalletCMD.Parse(os.Args[2:])
 		if err!=nil{
@@ -165,6 +196,9 @@ func (cli * CLI) Run(){
 		cli.printChain()
 	}
 
+	if getBestHeight.Parsed(){
+		cli.getbestHeight()
+	}
 	if getBalanceCmd.Parsed(){
 			if *getBalanceAddress == ""{
 				os.Exit(1)
@@ -189,4 +223,33 @@ func (cli * CLI) Run(){
 		cli.listAddress()
 	}
 
+	if startNodeCmd.Parsed(){
+		nodeID:=os.Getenv("NODE_ID")
+		if nodeID==""{
+			startNodeCmd.Usage()
+			os.Exit(1)
+		}
+
+		cli.startNode(nodeID,*startNodeminner)
+	}
+
+
+}
+func (cli *CLI) getbestHeight() {
+
+	fmt.Println(cli.bc.GetBestHeight())
+}
+func (cli *CLI) startNode(nodeID string, minnerAddress string) {
+	fmt.Printf("Starting node: %s\n",nodeID)
+
+	if len(minnerAddress) >0 {
+		if ValidateAddress([]byte(minnerAddress)){
+			 fmt.Println("%minner is on ",minnerAddress)
+		}else{
+			log.Panic("error minner Address")
+		}
+
+
+	}
+	StartServer(nodeID,minnerAddress,cli.bc)
 }

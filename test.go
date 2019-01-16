@@ -13,6 +13,7 @@ func TestCreateMerkleTreeRoot(){
 		404454260,
 		0,
 		[]*Transation{},
+		0,
 	}
 
 
@@ -46,6 +47,7 @@ func TestNewSerialize(){
 		404454260,
 		0,
 		[]*Transation{},
+		0,
 	}
 
 	deBlock:=DeserializeBlock(block.Serialize())
@@ -66,6 +68,7 @@ func TestPow(){
 		404454260,
 		0,
 		[]*Transation{},
+		0,
 	}
 
 	pow:=NewProofofWork(block)

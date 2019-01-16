@@ -25,7 +25,7 @@ type Block struct{
 	Bits int32
 	Nonce int32
 	Transations []*Transation
-
+	Height int32
 }
 
 
@@ -124,7 +124,7 @@ func (b*Block)String(){
 	fmt.Printf("nonce:%s\n",strconv.FormatInt(int64(b.Nonce),10))
 }
 
-func  NewBlock(transations []*Transation, prevBlockHash []byte) * Block{
+func  NewBlock(transations []*Transation, prevBlockHash []byte,heitght int32) * Block{
 	block := &Block{
 		2,
 		prevBlockHash,
@@ -134,6 +134,7 @@ func  NewBlock(transations []*Transation, prevBlockHash []byte) * Block{
 		404454260,
 		0,
 		transations,
+		heitght,
 	}
 
 	pow := NewProofofWork(block)
@@ -156,6 +157,7 @@ func NewGensisBlock(transations []*Transation) * Block{
 		404454260,
 		0,
 		transations,
+		0,
 	}
 
 	pow:=NewProofofWork(block)

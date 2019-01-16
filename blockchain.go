@@ -36,16 +36,20 @@ func (bc * Blockchain) MineBlock(transations []*Transation ) *Block{
 	}
 
 	var lasthash []byte
-
+	var lastheight int32
 	err := bc.db.View(func(tx * bolt.Tx) error{
 		b:= tx.Bucket([]byte(blockBucket))
 		lasthash = b.Get([]byte("l"))
+		blockdata:= b.Get(lasthash)
+		block:=DeserializeBlock(blockdata)
+
+		lastheight = block.Height
 		return nil
 	})
 	if err!=nil{
 		log.Panic(err)
 	}
-	newBlock := NewBlock(transations,lasthash)
+	newBlock := NewBlock(transations,lasthash,lastheight+1)
 
 
 	bc.db.Update(func(tx *bolt.Tx) error {
@@ -357,4 +361,41 @@ func (bc * Blockchain) FindALLUTXO() map[string]TXOutputs{
 
 
 
+func (bc *Blockchain) GetBestHeight() int32{
+	var lastBlock Block
 
+	err := bc.db.View(func(tx*bolt.Tx) error{
+		b:=tx.Bucket([]byte(blockBucket))
+		lastHash := b.Get([]byte("l"))
+		blockdata := b.Get(lastHash)
+		lastBlock = *DeserializeBlock(blockdata)
+
+		return nil
+	})
+
+	if err !=nil{
+		log.Panic(err)
+	}
+	return lastBlock.Height
+}
+func (bc *Blockchain) Getblockhash() [][]byte {
+	var blocks [][]byte
+
+	bci:=bc.iterator()
+
+	for{
+		block:=bci.Next()
+
+		blocks= append(blocks,block.Hash)
+
+		if len(block.PrevBlockHash) ==0{
+			break
+		}
+	}
+
+
+
+
+
+	return blocks
+}

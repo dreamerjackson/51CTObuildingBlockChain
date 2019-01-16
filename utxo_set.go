@@ -9,10 +9,7 @@ type UTXOSet struct{
 	bchain * Blockchain
 }
 
-
-
 const utxoBucket = "chainset"
-
 
 func (u UTXOSet) Reindex(){
 
@@ -107,7 +104,6 @@ func (u UTXOSet) update(block * Block){
 
 	err:= db.Update(func(tx * bolt.Tx) error {
 		b:= tx.Bucket([]byte(utxoBucket))
-
 		for _,tx:=range block.Transations{
 			if tx.IsCoinBase()==false{
 				for _,vin := range tx.Vin{
@@ -132,11 +128,9 @@ func (u UTXOSet) update(block * Block){
 						if err !=nil{
 							log.Panic(err)
 						}
-
 					}
 				}
 			}
-
 			newOutputs :=TXOutputs{}
 
 			for _,out := range tx.Vout{
@@ -147,11 +141,8 @@ func (u UTXOSet) update(block * Block){
 			if err !=nil{
 				log.Panic(err)
 			}
-
-
 		}
 		return nil
-
 	})
 	if err !=nil{
 		log.Panic(err)
