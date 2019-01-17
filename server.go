@@ -12,7 +12,7 @@ import (
 const nodeversion = 0x00
 
 var nodeAddress string
-
+var blockInTransit  [][]byte
 const commonLength = 12
 type Version struct {
 	Version int
@@ -26,10 +26,6 @@ func (ver *Version) String(){
 	fmt.Printf("BestHeight:%d\n",ver.BestHeight)
 	fmt.Printf("AddrFrom:%s\n",ver.AddrFrom)
 }
-
-
-
-
 
 
 var knownNodes = []string{"localhost:3000"}
@@ -73,9 +69,163 @@ func handleConnction(conn net.Conn, bc *Blockchain) {
 	case "version":
 	fmt.Printf("\nstr:获取version\n")
 		handleVersion(request,bc)
-
+	case "getblocks":
+		handleGetBlock(request,bc)
+	case "inv":
+		handleInv(request,bc)
+	case "getdata":
+		handleGetData(request,bc)
+	case "block":
+		handleBlock(request,bc)
 	}
 
+}
+func handleBlock(request []byte, bc *Blockchain) {
+
+	var buff bytes.Buffer
+
+	var payload blocksend
+
+	buff.Write(request[commonLength:])
+	dec:= gob.NewDecoder(&buff)
+	err := dec.Decode(&payload)
+
+	if err !=nil{
+		log.Panic(err)
+	}
+
+	blockdata:= payload.Block
+
+	block:= DeserializeBlock(blockdata)
+	bc.AddBlock(block)
+	fmt.Printf("Recieve a new Block")
+
+	if len(blockInTransit) >0{
+		blockHash:= blockInTransit[0]
+		sendGetData(payload.AddrFrom,"block",blockHash)
+		blockInTransit = blockInTransit[1:]
+	}else{
+		set:= UTXOSet{bc}
+		set.Reindex()
+	}
+}
+func handleGetData(request []byte, bc *Blockchain) {
+	fmt.Println("jkjkjhgffghjjkjkkkkkkkkkkkkkkk")
+	var buff bytes.Buffer
+	var payload getdata
+	buff.Write(request[commonLength:])
+	dec:=gob.NewDecoder(&buff)
+	err:= dec.Decode(&payload)
+	if err !=nil{
+		log.Panic(err)
+	}
+
+	if payload.Type=="block"{
+		fmt.Printf("payload.ID:%x\n",payload.ID)
+		block ,err:= bc.GetBlock([]byte(payload.ID))
+		//fmt.Println("g5")
+		if err!=nil{
+			log.Panic(err)
+		}
+		fmt.Println("g6: ",payload.AddrFrom)
+		sendBlock(payload.AddrFrom,&block)
+	}
+
+}
+
+type blocksend struct {
+	AddrFrom string
+	Block []byte
+}
+
+func sendBlock(addr string, block *Block) {
+	fmt.Println("发送block: ",addr)
+	data:= blocksend{nodeAddress,block.Serialize()}
+	payload := gobEncode(data)
+
+	request:= append(commandToBytes("block"),payload...)
+
+	sendData(addr,request)
+}
+func handleInv(request []byte, bc *Blockchain) {
+	var buff bytes.Buffer
+
+	var payload inv
+	buff.Write(request[commonLength:])
+
+	dec:= gob.NewDecoder(&buff)
+	err:= dec.Decode(&payload)
+
+	if err !=nil{
+		log.Panic(err)
+	}
+
+
+	fmt.Printf("Recieve inventory %d,%s",len(payload.Items),payload.Type)
+
+
+	if payload.Type =="block"{
+		blockInTransit = payload.Items
+
+		blockHash:= payload.Items[0]
+		sendGetData(payload.AddrFrom,"block",blockHash)
+
+		newInTransit := [][]byte{}
+
+		for _,b:= range blockInTransit{
+			if bytes.Compare(b,blockHash)!=0{
+				newInTransit = append(newInTransit,b)
+			}
+		}
+		blockInTransit =  newInTransit
+	}
+}
+
+type getdata struct {
+	AddrFrom string
+	Type string
+	ID []byte
+}
+
+func sendGetData(addr string, kind string, id []byte) {
+	payload:= gobEncode(getdata{nodeAddress,kind,id})
+
+	request:= append(commandToBytes("getdata"),payload...)
+
+	sendData(addr,request)
+}
+func handleGetBlock(request []byte, bc *Blockchain) {
+
+
+	var buff bytes.Buffer
+	var payload getblocks
+
+	buff.Write(request[commonLength:])
+
+	dec:= gob.NewDecoder(&buff)
+	err:= dec.Decode(&payload)
+
+	if err !=nil{
+		log.Panic(err)
+	}
+
+	block:= bc.Getblockhash()
+	fmt.Println("sendenv: ",payload.Addrfrom)
+	sendInv(payload.Addrfrom,"block",block)
+}
+
+type inv struct {
+	AddrFrom string
+	Type string
+	Items [][]byte
+}
+
+func sendInv(addr string, kind string, items [][]byte) {
+	inventory:= inv{nodeAddress,kind,items}
+	payload := gobEncode(inventory)
+	request := append(commandToBytes("inv"),payload...)
+
+	sendData(addr,request)
 }
 
 func handleVersion(request []byte, bc *Blockchain) {
@@ -97,7 +247,7 @@ func handleVersion(request []byte, bc *Blockchain) {
 
 
 	if myBestHeight < foreignerBestHeight{
-		//sendGetBlock(payload.AddrFrom)
+		sendGetBlock(payload.AddrFrom)
 	}else{
 
 		sendVersion(payload.AddrFrom,bc)
@@ -110,7 +260,19 @@ func handleVersion(request []byte, bc *Blockchain) {
 
 }
 
+type getblocks struct {
+	Addrfrom string
+}
 
+func sendGetBlock(address string) {
+	payload:=  gobEncode(getblocks{nodeAddress})
+
+	request:= append(commandToBytes("getblocks"),payload...)
+
+	sendData(address,request)
+
+
+}
 func nodeIsKnow(addr string) bool {
 
 

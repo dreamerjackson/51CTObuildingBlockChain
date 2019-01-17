@@ -25,6 +25,49 @@ type BlockChainIterateor struct{
 	currenthash []byte
 	db * bolt.DB
 }
+
+
+func (bc * Blockchain) AddBlock(block * Block){
+
+		err:= bc.db.Update(func(tx * bolt.Tx) error{
+
+			b:=tx.Bucket([]byte(blockBucket))
+
+			blockIndb:= b.Get(block.Hash)
+			if blockIndb!=nil{
+				return nil
+			}
+
+			blockData:= block.Serialize()
+			err:= b.Put(block.Hash,blockData)
+
+			if err !=nil{
+				log.Panic(err)
+			}
+
+			lastHash:= b.Get([]byte("l"))
+			lastBlockdata:= b.Get(lastHash)
+			lastblock:= DeserializeBlock(lastBlockdata)
+
+			if block.Height > lastblock.Height{
+				err = b.Put([]byte("l"),block.Hash)
+				if err !=nil{
+					log.Panic(err)
+				}
+				bc.tip = block.Hash
+			}
+
+			return nil
+		})
+	if err!=nil{
+		log.Panic(err)
+	}
+}
+
+
+
+
+
 func (bc * Blockchain) MineBlock(transations []*Transation ) *Block{
 
 	for _,tx := range transations{
@@ -398,4 +441,26 @@ func (bc *Blockchain) Getblockhash() [][]byte {
 
 
 	return blocks
+}
+func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
+	var block Block
+
+	err:= bc.db.View(func(tx *bolt.Tx) error{
+		b:=tx.Bucket([]byte(blockBucket))
+
+		blockData:= b.Get(blockHash)
+
+		if blockData ==nil{
+			return errors.New("Block is not Fund")
+		}
+
+		block = *DeserializeBlock(blockData)
+		return nil
+	})
+
+	if err !=nil{
+		return block ,err
+	}
+
+	return block ,nil
 }
