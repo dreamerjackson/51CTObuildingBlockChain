@@ -460,6 +460,13 @@ func (bc *Blockchain) GetBlockHashScope(low int32, high int32) [][]byte {
 			break
 		}
 	}
+=======
+
+
+
+
+
+>>>>>>> cf53c3ca4c3648aa24cb1ca1b6e877427857d628
 	return blocks
 }
 func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
