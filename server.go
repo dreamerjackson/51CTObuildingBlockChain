@@ -209,7 +209,8 @@ func handleGetBlock(request []byte, bc *Blockchain) {
 		log.Panic(err)
 	}
 
-	block:= bc.Getblockhash()
+	//block:= bc.Getblockhash()
+	block:= bc.GetBlockHashScope(payload.LowHeight,payload.HighHeight)
 	fmt.Println("sendenv: ",payload.Addrfrom)
 	sendInv(payload.Addrfrom,"block",block)
 }
@@ -247,7 +248,7 @@ func handleVersion(request []byte, bc *Blockchain) {
 
 
 	if myBestHeight < foreignerBestHeight{
-		sendGetBlock(payload.AddrFrom)
+		sendGetBlock(payload.AddrFrom,myBestHeight+1,foreignerBestHeight)
 	}else{
 
 		sendVersion(payload.AddrFrom,bc)
@@ -261,11 +262,13 @@ func handleVersion(request []byte, bc *Blockchain) {
 }
 
 type getblocks struct {
-	Addrfrom string
+	Addrfrom    string    //命令发送方地址，用于对方应答回来
+	LowHeight   int32     //区块高度--低
+	HighHeight  int32     //区块高度--高
 }
 
-func sendGetBlock(address string) {
-	payload:=  gobEncode(getblocks{nodeAddress})
+func sendGetBlock(address string, low int32, high int32) {
+	payload:=  gobEncode(getblocks{nodeAddress,low, high})
 
 	request:= append(commandToBytes("getblocks"),payload...)
 

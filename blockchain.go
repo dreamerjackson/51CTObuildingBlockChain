@@ -421,6 +421,8 @@ func (bc *Blockchain) GetBestHeight() int32{
 	}
 	return lastBlock.Height
 }
+
+//获取全部区块的Hash，返回的是hash数组
 func (bc *Blockchain) Getblockhash() [][]byte {
 	var blocks [][]byte
 
@@ -435,11 +437,36 @@ func (bc *Blockchain) Getblockhash() [][]byte {
 			break
 		}
 	}
+	return blocks
+}
+
+//获取指定区块范围的Hash，返回的是hash数组
+func (bc *Blockchain) GetBlockHashScope(low int32, high int32) [][]byte {
+	var blocks [][]byte
+	bci := bc.iterator()
+	fmt.Printf("GetBlockHashScope: low=%d, high=%d\n", low,high)
+	for{
+		block:=bci.Next()
+
+		if (block.Height >= high) && (block.Height <= high) {
+			blocks = append(blocks,block.Hash)
+		}
+
+		if block.Height <= high{
+			break;
+		}
+
+		if len(block.PrevBlockHash)==0{
+			break
+		}
+	}
+=======
 
 
 
 
 
+>>>>>>> cf53c3ca4c3648aa24cb1ca1b6e877427857d628
 	return blocks
 }
 func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
